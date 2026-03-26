@@ -251,6 +251,7 @@ fi
 
 # ── Inject project-specific values ──
 GIT_USER="$(git config user.name 2>/dev/null || echo '')"
+STORE_ID="$(printf '%s' "$TARGET_DIR" | shasum | cut -c1-8)"
 
 if [ -f src/pages/ProtoSettingsAbout.tsx ]; then
   sed -i '' "s|__PROJECT_DIR__|$TARGET_DIR|g" src/pages/ProtoSettingsAbout.tsx 2>/dev/null || true
@@ -260,6 +261,11 @@ if [ -f src/state/app-store.ts ]; then
   sed -i '' "s|__GIT_USER__|$GIT_USER|g" src/state/app-store.ts 2>/dev/null || true
   sed -i '' "s|__PROTO_NAME__|$PROJECT_NAME|g" src/state/app-store.ts 2>/dev/null || true
 fi
+
+# Unique localStorage keys per project (prevents data bleeding between projects on same port)
+for f in src/state/app-store.ts src/state/deploy-store.ts src/state/nav-store.ts; do
+  [ -f "$f" ] && sed -i '' "s|__STORE_ID__|$STORE_ID|g" "$f" 2>/dev/null || true
+done
 
 # ── Make scripts executable ──
 chmod +x publish-folder.sh start-dev.command start-ladle.command 2>/dev/null || true

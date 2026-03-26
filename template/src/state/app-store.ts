@@ -44,7 +44,7 @@ export const useAppStore = create<AppState>()(
       setVercelProjectName: (name) => set({ vercelProjectName: name }),
     }),
     {
-      name: 'proto-app-store',
+      name: 'proto-app-__STORE_ID__',
       partialize: (state) => ({
         protoSettings: state.protoSettings,
         gitToken: state.gitToken,

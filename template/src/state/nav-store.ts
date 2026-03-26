@@ -101,7 +101,7 @@ export const useNavStore = create<NavState>()(
         set({ topItems: defaultTopItems, bottomItems: defaultBottomItems, activeIndex: 1 }),
     }),
     {
-      name: 'proto-nav-store',
+      name: 'proto-nav-__STORE_ID__',
       partialize: (s) => ({
         topItems: s.topItems,
         bottomItems: s.bottomItems,

@@ -36,7 +36,7 @@ export const useDeployStore = create<DeployState>()(
         set((s) => ({ pushes: [p, ...s.pushes].slice(0, 50) })),
     }),
     {
-      name: 'proto-deploy-store',
+      name: 'proto-deploy-__STORE_ID__',
       partialize: (s) => ({ deployments: s.deployments, pushes: s.pushes }),
     },
   ),
