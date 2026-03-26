@@ -12,7 +12,6 @@ ARCHIVE_URL="https://github.com/$REPO/archive/refs/heads/$BRANCH.zip"
 
 # ── Colors ──
 bold="\033[1m"
-dim="\033[2m"
 green="\033[32m"
 yellow="\033[33m"
 red="\033[31m"
@@ -21,6 +20,33 @@ reset="\033[0m"
 info()  { printf "${bold}${green}>>>${reset} %s\n" "$1"; }
 warn()  { printf "${bold}${yellow}>>>${reset} %s\n" "$1"; }
 error() { printf "${bold}${red}>>>${reset} %s\n" "$1" >&2; }
+
+# ── Target = current directory ──
+TARGET_DIR="$(pwd)"
+PROJECT_NAME="$(basename "$TARGET_DIR")"
+SAFE_NAME="$(printf '%s' "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g')"
+if [ -z "$SAFE_NAME" ]; then
+  SAFE_NAME="my-prototype"
+fi
+
+# ── Warn if folder is not empty ──
+if [ "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; then
+  warn "This folder is not empty: $TARGET_DIR"
+  echo ""
+  ls -1 "$TARGET_DIR" | head -10
+  FILE_COUNT="$(ls -1 "$TARGET_DIR" | wc -l | tr -d ' ')"
+  if [ "$FILE_COUNT" -gt 10 ]; then
+    echo "  ... and $((FILE_COUNT - 10)) more"
+  fi
+  echo ""
+  printf "  Continue anyway? Existing files may be overwritten. (y/n) "
+  read -r answer
+  if [[ ! "$answer" =~ ^[Yy]$ ]]; then
+    error "Aborted."
+    exit 1
+  fi
+  echo ""
+fi
 
 # ── Check Node.js ──
 if ! command -v node >/dev/null 2>&1; then
@@ -34,7 +60,7 @@ if ! command -v node >/dev/null 2>&1; then
 
     # Try auto-install via Homebrew on macOS
     if command -v brew >/dev/null 2>&1; then
-      echo -n "  Homebrew detected. Install Node.js now? (y/n) "
+      printf "  Homebrew detected. Install Node.js now? (y/n) "
       read -r answer
       if [[ "$answer" =~ ^[Yy]$ ]]; then
         brew install node
@@ -49,55 +75,6 @@ fi
 
 NODE_VERSION="$(node -v 2>/dev/null || echo 'unknown')"
 info "Using Node.js $NODE_VERSION"
-
-# ── Ask for project name ──
-echo ""
-printf "${bold}What do you want to call your prototype?${reset} ${dim}(e.g. onboarding-flow)${reset}\n"
-printf "> "
-read -r PROJECT_INPUT
-
-if [ -z "$PROJECT_INPUT" ]; then
-  PROJECT_INPUT="my-prototype"
-fi
-
-# Sanitize to a safe folder name
-SAFE_NAME="$(printf '%s' "$PROJECT_INPUT" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g')"
-if [ -z "$SAFE_NAME" ]; then
-  SAFE_NAME="my-prototype"
-fi
-
-# ── Ask where to create it ──
-DEFAULT_DIR="$HOME/Desktop"
-echo ""
-printf "${bold}Where should I create it?${reset} ${dim}(press Enter for Desktop)${reset}\n"
-printf "> "
-read -r DIR_INPUT
-
-if [ -z "$DIR_INPUT" ]; then
-  PARENT_DIR="$DEFAULT_DIR"
-else
-  # Expand ~ if used
-  PARENT_DIR="${DIR_INPUT/#\~/$HOME}"
-fi
-
-if [ ! -d "$PARENT_DIR" ]; then
-  error "Directory does not exist: $PARENT_DIR"
-  exit 1
-fi
-
-TARGET_DIR="$PARENT_DIR/$SAFE_NAME"
-
-if [ -d "$TARGET_DIR" ]; then
-  warn "Folder already exists: $TARGET_DIR"
-  printf "  Overwrite? (y/n) "
-  read -r answer
-  if [[ "$answer" =~ ^[Yy]$ ]]; then
-    rm -rf "$TARGET_DIR"
-  else
-    error "Aborted."
-    exit 1
-  fi
-fi
 
 # ── Download template ──
 info "Downloading template..."
@@ -121,15 +98,13 @@ info "Setting up project..."
 
 unzip -q "$TMP_ZIP" -d "$TMP_EXTRACT"
 
-# The zip extracts to a folder named "proto-kit-main/" — move its template/ contents
+# The zip extracts to a folder named "proto-kit-main/"
 EXTRACTED="$TMP_EXTRACT/proto-kit-$BRANCH"
 
 if [ ! -d "$EXTRACTED/template" ]; then
   error "Unexpected archive structure. Expected template/ folder in repo."
   exit 1
 fi
-
-mkdir -p "$TARGET_DIR"
 
 # Copy template contents into the project
 if command -v rsync >/dev/null 2>&1; then
@@ -154,11 +129,8 @@ for f in "$TMP_SCAFFOLD"/*; do
     cp -R "$f" .
   fi
 done
-# Always take package.json and tsconfig from scaffold
+# Always take package.json from scaffold
 cp "$TMP_SCAFFOLD/package.json" .
-cp "$TMP_SCAFFOLD/tsconfig.json" . 2>/dev/null || true
-cp "$TMP_SCAFFOLD/tsconfig.app.json" . 2>/dev/null || true
-cp "$TMP_SCAFFOLD/tsconfig.node.json" . 2>/dev/null || true
 rm -rf "$TMP_SCAFFOLD"
 
 # ── Configure scripts ──
@@ -219,34 +191,42 @@ npm install -D \
   typescript-eslint \
   --silent 2>/dev/null
 
-# ── Patch tsconfig.app.json ──
+# ── Patch tsconfig files ──
+# Vite's generated tsconfigs have comments — strip them before parsing
+strip_json_comments() {
+  sed 's|//.*$||' "$1" | sed '/^\s*$/d'
+}
+
 if [ -f tsconfig.app.json ]; then
   node -e "
 const fs = require('fs');
-const cfg = JSON.parse(fs.readFileSync('tsconfig.app.json', 'utf8'));
+const raw = fs.readFileSync('tsconfig.app.json', 'utf8');
+const clean = raw.replace(/\/\/.*$/gm, '').replace(/,(\s*[}\]])/g, '\$1');
+const cfg = JSON.parse(clean);
 if (!cfg.compilerOptions.paths) {
   cfg.compilerOptions.baseUrl = '.';
   cfg.compilerOptions.paths = { '@/*': ['src/*'] };
-  fs.writeFileSync('tsconfig.app.json', JSON.stringify(cfg, null, 2) + '\n');
 }
+if (!cfg.compilerOptions.types) {
+  cfg.compilerOptions.types = ['vite/client'];
+}
+fs.writeFileSync('tsconfig.app.json', JSON.stringify(cfg, null, 2) + '\n');
 "
 fi
 
-# ── Patch tsconfig.node.json ──
 if [ -f tsconfig.node.json ]; then
   node -e "
 const fs = require('fs');
-const cfg = JSON.parse(fs.readFileSync('tsconfig.node.json', 'utf8'));
+const raw = fs.readFileSync('tsconfig.node.json', 'utf8');
+const clean = raw.replace(/\/\/.*$/gm, '').replace(/,(\s*[}\]])/g, '\$1');
+const cfg = JSON.parse(clean);
 const needed = ['git-api.ts', 'vercel-api.ts'];
 const inc = cfg.include || [];
-let changed = false;
 for (const f of needed) {
-  if (!inc.includes(f)) { inc.push(f); changed = true; }
+  if (!inc.includes(f)) inc.push(f);
 }
-if (changed) {
-  cfg.include = inc;
-  fs.writeFileSync('tsconfig.node.json', JSON.stringify(cfg, null, 2) + '\n');
-}
+cfg.include = inc;
+fs.writeFileSync('tsconfig.node.json', JSON.stringify(cfg, null, 2) + '\n');
 "
 fi
 
@@ -278,21 +258,23 @@ fi
 
 if [ -f src/state/app-store.ts ]; then
   sed -i '' "s|__GIT_USER__|$GIT_USER|g" src/state/app-store.ts 2>/dev/null || true
-  sed -i '' "s|__PROTO_NAME__|$PROJECT_INPUT|g" src/state/app-store.ts 2>/dev/null || true
+  sed -i '' "s|__PROTO_NAME__|$PROJECT_NAME|g" src/state/app-store.ts 2>/dev/null || true
 fi
 
 # ── Make scripts executable ──
 chmod +x publish-folder.sh start-dev.command start-ladle.command 2>/dev/null || true
 
 # ── Initialize git ──
-git init -q
+if [ ! -d .git ]; then
+  git init -q
+fi
 git add -A
 git commit -q -m "Initial prototype setup"
 
 # ── Done! ──
 echo ""
 echo "────────────────────────────────────────────"
-info "Prototype created at: $TARGET_DIR"
+info "Prototype ready: $TARGET_DIR"
 echo "────────────────────────────────────────────"
 echo ""
 info "Starting dev server..."

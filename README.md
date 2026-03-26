@@ -4,22 +4,26 @@ Create a Zluri prototype with one command. No setup, no configuration — just r
 
 ## Quick Start
 
+Create a folder, `cd` into it, and run:
+
 ```bash
+mkdir my-prototype && cd my-prototype
 npx zluri-proto
 ```
 
 Or without npm:
 
 ```bash
+mkdir my-prototype && cd my-prototype
 curl -fsSL https://raw.githubusercontent.com/mthnmhn/proto-kit/main/setup.sh | bash
 ```
 
 The script will:
 
-1. Ask for a project name
-2. Ask where to create it (defaults to Desktop)
-3. Download the template, install dependencies
-4. Start the dev server and open it in your browser
+1. Download the template and install dependencies
+2. Start the dev server and open it in your browser
+
+If the folder isn't empty, you'll get a warning before anything is overwritten.
 
 ## What You Get
 
