@@ -99,6 +99,33 @@ export default function ProtoSettingsAbout() {
                 </div>
                 <div className="min-w-0 flex-1 space-y-2">
                   <p className="text-2xs font-semibold text-grey-800">
+                    Start the dev server
+                  </p>
+                  <p className="text-3xs text-grey-500">
+                    Run this command to start your prototype locally. It will open
+                    automatically at{' '}
+                    <code className="rounded bg-grey-100 px-1 py-0.5 font-mono">localhost:5173</code>.
+                    Run this again any time you want to come back to your prototype.
+                  </p>
+                  <div className="flex items-center gap-2 rounded-md bg-grey-100 px-3 py-2">
+                    <Terminal className="h-3.5 w-3.5 shrink-0 text-grey-400" />
+                    <code className="font-mono text-3xs text-grey-700">
+                      npm run dev
+                    </code>
+                    <CopyButton text="npm run dev" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Step 3 */}
+            <Card>
+              <CardContent className="flex gap-4 p-4">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-blue-50 text-3xs font-semibold text-blue-600">
+                  3
+                </div>
+                <div className="min-w-0 flex-1 space-y-2">
+                  <p className="text-2xs font-semibold text-grey-800">
                     Start building with AI
                   </p>
                   <p className="text-3xs text-grey-500">
