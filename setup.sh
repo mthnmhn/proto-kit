@@ -192,43 +192,43 @@ npm install -D \
   --silent 2>/dev/null
 
 # ── Patch tsconfig files ──
-# Vite's generated tsconfigs have comments — strip them before parsing
-strip_json_comments() {
-  sed 's|//.*$||' "$1" | sed '/^\s*$/d'
-}
-
-if [ -f tsconfig.app.json ]; then
+# Vite's tsconfigs have block comments (/* ... */) and line comments (//) — use sed to strip them
+patch_tsconfig_app() {
+  # Strip /* ... */ and // comments, then remove trailing commas before } or ]
+  sed -e 's|/\*[^*]*\*/||g' -e 's|//.*$||' tsconfig.app.json \
+    | tr '\n' '\f' \
+    | sed -E 's/,([[:space:]\f]*[}\]])/\1/g' \
+    | tr '\f' '\n' > tsconfig.app.clean.json
   node -e "
-const fs = require('fs');
-const raw = fs.readFileSync('tsconfig.app.json', 'utf8');
-const clean = raw.replace(/\/\/.*$/gm, '').replace(/,(\s*[}\]])/g, '\$1');
-const cfg = JSON.parse(clean);
-if (!cfg.compilerOptions.paths) {
-  cfg.compilerOptions.baseUrl = '.';
-  cfg.compilerOptions.paths = { '@/*': ['src/*'] };
-}
-if (!cfg.compilerOptions.types) {
-  cfg.compilerOptions.types = ['vite/client'];
-}
+var fs = require('fs');
+var cfg = JSON.parse(fs.readFileSync('tsconfig.app.clean.json', 'utf8'));
+cfg.compilerOptions.baseUrl = '.';
+cfg.compilerOptions.paths = { '@/*': ['src/*'] };
+if (!cfg.compilerOptions.types) cfg.compilerOptions.types = ['vite/client'];
 fs.writeFileSync('tsconfig.app.json', JSON.stringify(cfg, null, 2) + '\n');
 "
-fi
-
-if [ -f tsconfig.node.json ]; then
-  node -e "
-const fs = require('fs');
-const raw = fs.readFileSync('tsconfig.node.json', 'utf8');
-const clean = raw.replace(/\/\/.*$/gm, '').replace(/,(\s*[}\]])/g, '\$1');
-const cfg = JSON.parse(clean);
-const needed = ['git-api.ts', 'vercel-api.ts'];
-const inc = cfg.include || [];
-for (const f of needed) {
-  if (!inc.includes(f)) inc.push(f);
+  rm -f tsconfig.app.clean.json
 }
+
+patch_tsconfig_node() {
+  sed -e 's|/\*[^*]*\*/||g' -e 's|//.*$||' tsconfig.node.json \
+    | tr '\n' '\f' \
+    | sed -E 's/,([[:space:]\f]*[}\]])/\1/g' \
+    | tr '\f' '\n' > tsconfig.node.clean.json
+  node -e "
+var fs = require('fs');
+var cfg = JSON.parse(fs.readFileSync('tsconfig.node.clean.json', 'utf8'));
+var inc = cfg.include || [];
+if (inc.indexOf('git-api.ts') === -1) inc.push('git-api.ts');
+if (inc.indexOf('vercel-api.ts') === -1) inc.push('vercel-api.ts');
 cfg.include = inc;
 fs.writeFileSync('tsconfig.node.json', JSON.stringify(cfg, null, 2) + '\n');
 "
-fi
+  rm -f tsconfig.node.clean.json
+}
+
+[ -f tsconfig.app.json ] && patch_tsconfig_app
+[ -f tsconfig.node.json ] && patch_tsconfig_node
 
 # ── Patch index.css for Tailwind v4 ──
 INDEX_CSS="src/index.css"
