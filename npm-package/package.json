@@ -1,0 +1,14 @@
+{
+  "name": "zluri-proto",
+  "version": "1.0.0",
+  "description": "Create a Zluri prototype with one command",
+  "bin": {
+    "zluri-proto": "./bin/cli.js"
+  },
+  "files": ["bin"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mthnmhn/proto-kit"
+  }
+}

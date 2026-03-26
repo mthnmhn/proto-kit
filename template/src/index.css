@@ -1,0 +1,67 @@
+/* Zluri Design System Fonts — must come before @import "tailwindcss" */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fragment+Mono:wght@400&display=swap');
+
+@config "../tailwind.config.cjs";
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Sora', sans-serif;
+  --font-mono: 'Fragment Mono', monospace;
+}
+
+:root {
+  /* Zluri Semantic Tokens */
+  --background: #FFFFFF;
+  --foreground: #222222;
+  --muted: #F8F8F8;
+  --muted-foreground: #909090;
+  --popover: #FFFFFF;
+  --popover-foreground: #222222;
+  --card: #FFFFFF;
+  --card-foreground: #222222;
+  --border: #E6E6E6;
+  --input: #E6E6E6;
+  --primary: #0066FF;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F8F8F8;
+  --secondary-foreground: #222222;
+  --accent: #E5F2FF;
+  --accent-foreground: #0066FF;
+  --destructive: #E33F30;
+  --destructive-foreground: #FFFFFF;
+  --success: #229F2E;
+  --success-foreground: #FFFFFF;
+  --warning: #F68009;
+  --warning-foreground: #FFFFFF;
+  --ring: #3388FF;
+  --radius: 10px;
+
+  /* Layout-specific colors */
+  --header-bg-start: #001e54;
+  --header-bg-end: #001131;
+  --ribbon-bg: #2266e2;
+  --content-bg: #e8f0fc;
+}
+
+* {
+  @apply border-border;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+  margin: 0;
+  font-family: 'Sora', sans-serif;
+}
+
+code,
+pre,
+.font-mono {
+  font-family: 'Fragment Mono', monospace;
+}

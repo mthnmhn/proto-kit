@@ -1,0 +1,7 @@
+{
+  "items": [
+    { "id": "item-1", "name": "First item", "status": "Ready" },
+    { "id": "item-2", "name": "Second item", "status": "In progress" },
+    { "id": "item-3", "name": "Third item", "status": "Blocked" }
+  ]
+}
